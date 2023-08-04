@@ -11,6 +11,9 @@ int main()
     
     copy(abc, &pp);
     std::wcout << pp;
+
+    delete[] pp;
+    pp = nullptr;
 }
 
 void copy(char* str, char** strPtr)
