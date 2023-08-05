@@ -4,8 +4,9 @@ int maxMeanIndex(int** array, int y, int x);
 
 int main()
 {
-    int** array{ new int* [9] };
-    for (int i = 0; i < 9; i++)
+    constexpr int size{ 9 };
+    int** array{ new int* [size] };
+    for (int i = 0; i < size; i++)
     {
         array[i] = new int[6];
         for (int j = 0; j < 6; j++)
@@ -20,8 +21,13 @@ int main()
         array[3][i] += 100;
     }
 
-    std::cout << maxMeanIndex(array, 9, 6);
+    std::cout << maxMeanIndex(array, size, 6);
 
+    for (int i = 0; i < size; i++)
+    {
+        delete[] array[i];
+    }
+    delete[] array;
 }
 
 int maxMeanIndex(int** array, int y, int x)

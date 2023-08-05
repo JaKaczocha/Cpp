@@ -17,6 +17,11 @@ int main()
 
     printArr(array, sizeF, sizeS);
 
+    for (int i = 0; i < sizeF; i++)
+    {
+        delete[] array[i];
+    }
+    delete[] array;
 }
 
 void printArr(int** array, int y, int x)
