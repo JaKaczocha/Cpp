@@ -1,0 +1,2 @@
+number large letters: 3
+number of characters: 20
