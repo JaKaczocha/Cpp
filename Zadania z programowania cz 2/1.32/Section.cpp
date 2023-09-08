@@ -54,3 +54,11 @@ bool Section::intersect(const Section& s) const
 
     return false; // No intersection
 }
+
+double leng(Section s)
+{
+    double x = std::abs(s.x1 - s.x2);
+    double y = std::abs(s.y1 - s.y2);
+    double len = std::sqrt(x * x + y * y);
+    return len;
+}
