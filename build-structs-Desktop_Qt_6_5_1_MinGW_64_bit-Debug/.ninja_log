@@ -1,0 +1,13 @@
+# ninja log v5
+11	128	7329241657010042	CMakeFiles/structs.dir/interpolation.c.obj	3d564b15a041571b
+0	157	7329241657369080	CMakeFiles/structs.dir/main.c.obj	9b063ab33f20a1dd
+5	159	7329241657389027	CMakeFiles/structs.dir/colorConverter.c.obj	42845deeba98d9f9
+14	111	7329242042431848	CMakeFiles/structs.dir/interpolation.c.obj	3d564b15a041571b
+9	114	7329242042431848	CMakeFiles/structs.dir/render.c.obj	840f12c71f4e48d5
+115	315	7329242044473018	structs.exe	63f0ce1ae9f77907
+2	89	7329243285576366	CMakeFiles/structs.dir/main.c.obj	9b063ab33f20a1dd
+89	226	7329243286902821	structs.exe	63f0ce1ae9f77907
+2	92	7329243810010375	CMakeFiles/structs.dir/main.c.obj	9b063ab33f20a1dd
+96	247	7329243811501493	structs.exe	63f0ce1ae9f77907
+2	96	7329243985161860	CMakeFiles/structs.dir/main.c.obj	9b063ab33f20a1dd
+97	253	7329243986667821	structs.exe	63f0ce1ae9f77907
