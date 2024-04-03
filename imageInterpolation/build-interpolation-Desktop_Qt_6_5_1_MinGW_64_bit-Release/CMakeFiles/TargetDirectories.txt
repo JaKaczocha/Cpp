@@ -1,0 +1,7 @@
+C:/Users/User/Desktop/Cpp/Cpp/imageInterpolation/build-interpolation-Desktop_Qt_6_5_1_MinGW_64_bit-Release/CMakeFiles/interpolation.dir
+C:/Users/User/Desktop/Cpp/Cpp/imageInterpolation/build-interpolation-Desktop_Qt_6_5_1_MinGW_64_bit-Release/CMakeFiles/edit_cache.dir
+C:/Users/User/Desktop/Cpp/Cpp/imageInterpolation/build-interpolation-Desktop_Qt_6_5_1_MinGW_64_bit-Release/CMakeFiles/rebuild_cache.dir
+C:/Users/User/Desktop/Cpp/Cpp/imageInterpolation/build-interpolation-Desktop_Qt_6_5_1_MinGW_64_bit-Release/CMakeFiles/list_install_components.dir
+C:/Users/User/Desktop/Cpp/Cpp/imageInterpolation/build-interpolation-Desktop_Qt_6_5_1_MinGW_64_bit-Release/CMakeFiles/install.dir
+C:/Users/User/Desktop/Cpp/Cpp/imageInterpolation/build-interpolation-Desktop_Qt_6_5_1_MinGW_64_bit-Release/CMakeFiles/install/local.dir
+C:/Users/User/Desktop/Cpp/Cpp/imageInterpolation/build-interpolation-Desktop_Qt_6_5_1_MinGW_64_bit-Release/CMakeFiles/install/strip.dir

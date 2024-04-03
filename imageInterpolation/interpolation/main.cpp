@@ -2,172 +2,56 @@
 #include <fstream>
 #include <stdint.h>
 #include <math.h>
+#include <chrono>
 
-/*
-// Funkcja wykonująca interpolację sześcienną
-double cubicInterpolate(double p0, double p1, double p2, double p3, double x) {
-    double a = -0.5 * p0 + 1.5 * p1 - 1.5 * p2 + 0.5 * p3;
-    double b = p0 - 2.5 * p1 + 2 * p2 - 0.5 * p3;
-    double c = -0.5 * p0 + 0.5 * p2;
-    double d = p1;
+#define CLAMP(x, low, high) ((x) > (high) ? (high) : ((x) < (low) ? (low) : (x)))
 
-    return a * x * x * x + b * x * x + c * x + d;
+volatile float CubicHermite(float A, float B, float C, float D, float t) {
+    float a = -A * 0.5f + (3.0f * B) * 0.5f - (3.0f * C) * 0.5f + D * 0.5f;
+    float b = A - (5.0f * B) * 0.5f + 2.0f * C - D * 0.5f;
+    float c = -A * 0.5f + C * 0.5f;
+    float d = B;
+
+    return a * t * t * t + b * t * t + c * t + d;
 }
 
-
-// Funkcja wykonująca bicubiczną interpolację na danym zestawie punktów
-double bicubicInterpolate(double p00, double p01, double p02, double p03,
-                          double p10, double p11, double p12, double p13,
-                          double p20, double p21, double p22, double p23,
-                          double p30, double p31, double p32, double p33,
-                          double x_ratio, double y_ratio) {
-    double interpolatedValue =
-        cubicInterpolate(p00, p01, p02, p03, x_ratio) * cubicInterpolate(1, 0, 0, 0, y_ratio) +
-        cubicInterpolate(p10, p11, p12, p13, x_ratio) * cubicInterpolate(0, 1, 0, 0, y_ratio) +
-        cubicInterpolate(p20, p21, p22, p23, x_ratio) * cubicInterpolate(0, 0, 1, 0, y_ratio) +
-        cubicInterpolate(p30, p31, p32, p33, x_ratio) * cubicInterpolate(0, 0, 0, 1, y_ratio);
-
-    return interpolatedValue;
+volatile float bicubicInterpolate(float p[4][4], float x, float y) {
+    float arr[4];
+    arr[0] = CubicHermite(p[0][0], p[0][1], p[0][2], p[0][3], y);
+    arr[1] = CubicHermite(p[1][0], p[1][1], p[1][2], p[1][3], y);
+    arr[2] = CubicHermite(p[2][0], p[2][1], p[2][2], p[2][3], y);
+    arr[3] = CubicHermite(p[3][0], p[3][1], p[3][2], p[3][3], y);
+    return CubicHermite(arr[0], arr[1], arr[2], arr[3], x);
 }
 
+volatile void bicubicResize(uint16_t dest[], const uint16_t destWidth, const uint16_t destHeight, const uint16_t src[], const uint16_t srcWidth, const uint16_t srcHeight) {
+    for (int i = 0; i < destHeight; i++) {
+        for (int j = 0; j < destWidth; j++) {
+            float x = (float)j / (float)destWidth * (float)srcWidth;
+            float y = (float)i / (float)destHeight * (float)srcHeight;
 
+            int xInt = (int)x;
+            int yInt = (int)y;
 
-// Interpolacja metoda bicubiczna dla pikseli RGB565
-uint16_t calcBicubic(uint16_t p00, uint16_t p01, uint16_t p02, uint16_t p03,
-                     uint16_t p10, uint16_t p11, uint16_t p12, uint16_t p13,
-                     uint16_t p20, uint16_t p21, uint16_t p22, uint16_t p23,
-                     uint16_t p30, uint16_t p31, uint16_t p32, uint16_t p33,
-                     double x_ratio, double y_ratio) {
-    // Interpolacja bicubiczna dla każdej składowej koloru osobno
-
-    // Interpolacja dla czerwonej składowej
-    uint8_t r = ((uint8_t)((bicubicInterpolate(p00 >> 11 & 0x1F, p01 >> 11 & 0x1F,
-                                              p02 >> 11 & 0x1F, p03 >> 11 & 0x1F,
-                                              p10 >> 11 & 0x1F, p11 >> 11 & 0x1F,
-                                              p12 >> 11 & 0x1F, p13 >> 11 & 0x1F,
-                                              p20 >> 11 & 0x1F, p21 >> 11 & 0x1F,
-                                              p22 >> 11 & 0x1F, p23 >> 11 & 0x1F,
-                                              p30 >> 11 & 0x1F, p31 >> 11 & 0x1F,
-                                              p32 >> 11 & 0x1F, p33 >> 11 & 0x1F,
-                                              x_ratio, y_ratio))) << 11);
-
-    // Interpolacja dla zielonej składowej
-    uint8_t g = ((uint8_t)(bicubicInterpolate(p00 >> 5 & 0x3F, p01 >> 5 & 0x3F,
-                                              p02 >> 5 & 0x3F, p03 >> 5 & 0x3F,
-                                              p10 >> 5 & 0x3F, p11 >> 5 & 0x3F,
-                                              p12 >> 5 & 0x3F, p13 >> 5 & 0x3F,
-                                              p20 >> 5 & 0x3F, p21 >> 5 & 0x3F,
-                                              p22 >> 5 & 0x3F, p23 >> 5 & 0x3F,
-                                              p30 >> 5 & 0x3F, p31 >> 5 & 0x3F,
-                                              p32 >> 5 & 0x3F, p33 >> 5 & 0x3F,
-                                              x_ratio, y_ratio)) << 5);
-
-    // Interpolacja dla niebieskiej składowej
-    uint8_t b = ((uint8_t)(bicubicInterpolate(p00 & 0x1F, p01 & 0x1F,
-                                              p02 & 0x1F, p03 & 0x1F,
-                                              p10 & 0x1F, p11 & 0x1F,
-                                              p12 & 0x1F, p13 & 0x1F,
-                                              p20 & 0x1F, p21 & 0x1F,
-                                              p22 & 0x1F, p23 & 0x1F,
-                                              p30 & 0x1F, p31 & 0x1F,
-                                              p32 & 0x1F, p33 & 0x1F,
-                                              x_ratio, y_ratio)) );
-
-    // Składanie składowych koloru w piksel RGB565
-    return (r & 0xF800) | (g & 0x07E0) | (b & 0x001F);
-}
-
-// Clamp function
-int clamp(int value, int min, int max) {
-    if (value < min) return min;
-    if (value > max) return max;
-    return value;
-}
-
-void bicubic(  uint16_t dest[128*6][128*6], const uint16_t src[8][8]) {
-    uint16_t p00=0, p01=0, p02=0, p03=0;
-    uint16_t p10=0, p11=0, p12=0, p13=0;
-    uint16_t p20=0, p21=0, p22=0, p23=0;
-    uint16_t p30=0, p31=0, p32=0, p33=0;
-
-    float gx = 0.0, gy = 0.0;
-    int xIndex, yIndex;
-    int xFloor, yFloor;
-    double xRatio, yRatio;
-
-    for(int y = 0; y < 128*6; y++) {
-        for(int x = 0; x < 128*6; x++) {
-            gx = (x * 7.0) / (128*6 - 1);
-            gy = (y * 7.0) / (128*6 - 1);
-
-            xIndex = (int)gx;
-            yIndex = (int)gy;
-
-            xRatio = gx - xIndex;
-            yRatio = gy - yIndex;
-
-            // Getting the indices for 16 pixels surrounding the (x, y) point
-            xFloor = xIndex - 1;
-            yFloor = yIndex - 1;
-
-            // Extracting pixels for bicubic interpolation
-            for (int i = 0; i < 4; i++) {
-                for (int j = 0; j < 4; j++) {
-                    int xIndexClamped = clamp(xFloor + j, 0, 128 * 6 - 1);
-                    int yIndexClamped = clamp(yFloor + i, 0, 128 * 6 * 1);
-
-                    switch (i) {
-                    case 0:
-                        switch (j) {
-                        case 0: p00 = src[yIndexClamped][xIndexClamped]; break;
-                        case 1: p01 = src[yIndexClamped][xIndexClamped]; break;
-                        case 2: p02 = src[yIndexClamped][xIndexClamped]; break;
-                        case 3: p03 = src[yIndexClamped][xIndexClamped]; break;
-                        }
-                        break;
-                    case 1:
-                        switch (j) {
-                        case 0: p10 = src[yIndexClamped][xIndexClamped]; break;
-                        case 1: p11 = src[yIndexClamped][xIndexClamped]; break;
-                        case 2: p12 = src[yIndexClamped][xIndexClamped]; break;
-                        case 3: p13 = src[yIndexClamped][xIndexClamped]; break;
-                        }
-                        break;
-                    case 2:
-                        switch (j) {
-                        case 0: p20 = src[yIndexClamped][xIndexClamped]; break;
-                        case 1: p21 = src[yIndexClamped][xIndexClamped]; break;
-                        case 2: p22 = src[yIndexClamped][xIndexClamped]; break;
-                        case 3: p23 = src[yIndexClamped][xIndexClamped]; break;
-                        }
-                        break;
-                    case 3:
-                        switch (j) {
-                        case 0: p30 = src[yIndexClamped][xIndexClamped]; break;
-                        case 1: p31 = src[yIndexClamped][xIndexClamped]; break;
-                        case 2: p32 = src[yIndexClamped][xIndexClamped]; break;
-                        case 3: p33 = src[yIndexClamped][xIndexClamped]; break;
-                        }
-                        break;
-                    }
+            float p[4][4];
+            for (int m = -1; m <= 2; m++) {
+                for (int n = -1; n <= 2; n++) {
+                    int xIndex = xInt + m;
+                    int yIndex = yInt + n;
+                    xIndex = xIndex < 0 ? 0 : xIndex >= srcWidth ? srcWidth - 1 : xIndex;
+                    yIndex = yIndex < 0 ? 0 : yIndex >= srcHeight ? srcHeight - 1 : yIndex;
+                    p[m + 1][n + 1] = src[yIndex * srcWidth + xIndex];
                 }
             }
 
-            // Perform bicubic interpolation
-            uint16_t interpolatedPixel = calcBicubic(p00, p01, p02, p03,
-                                                     p10, p11, p12, p13,
-                                                     p20, p21, p22, p23,
-                                                     p30, p31, p32, p33,
-                                                     xRatio, yRatio);
-            // Assign the interpolated pixel value to the destination array
-            dest[y][x] = interpolatedPixel;
+            float interpolatedValue = bicubicInterpolate(p, x - xInt, y - yInt);
+            interpolatedValue = CLAMP(interpolatedValue, 1.0f, 4000.0f); // Zapewnienie, że wartość mieści się w zakresie uint16_t
+            dest[i * destWidth + j] = (uint16_t)interpolatedValue;
         }
     }
 }
 
-*/
-
-int nearestNeighbor(uint16_t dest[], const uint16_t destWidth, const uint16_t destHeight, const uint16_t src[],const uint16_t srcWidth, const uint16_t srcHeight)
+volatile int nearestNeighbor(uint16_t dest[], const uint16_t destWidth, const uint16_t destHeight, const uint16_t src[],const uint16_t srcWidth, const uint16_t srcHeight)
 {
     if(destWidth < srcWidth || destHeight < srcHeight) {
         std::cout << "size error";
@@ -200,7 +84,7 @@ int nearestNeighbor(uint16_t dest[], const uint16_t destWidth, const uint16_t de
 
 
 
-void bilinear(uint16_t dest[], uint16_t destWidth, uint16_t destHeight, const uint16_t src[], uint16_t srcWidth, uint16_t srcHeight) {
+volatile void bilinear(uint16_t dest[], uint16_t destWidth, uint16_t destHeight, const uint16_t src[], uint16_t srcWidth, uint16_t srcHeight) {
     float x_ratio = ((float)(srcWidth - 1)) / destWidth;
     float y_ratio = ((float)(srcHeight - 1)) / destHeight;
     float x_diff, y_diff;
@@ -319,7 +203,8 @@ void saveBMP(const char* filename, const uint16_t data[], int width, int height)
     std::cout << "BMP saved to: " << filename << std::endl;
 }
 
-uint16_t planszaDest[128 * 128];
+uint16_t planszaDest[160 * 128];
+uint16_t planszaDestTmp[80 * 64];
 
 uint16_t convertToColor(const uint16_t value,const float maxValue) {
     uint16_t r, g, b;
@@ -335,42 +220,58 @@ uint16_t convertToColor(const uint16_t value,const float maxValue) {
 }
 
 uint16_t plansza3[8*8]  = {
-    800, 700, 680, 660, 800, 622, 111, 50,
-    750, 900, 740, 680, 844, 843, 22, 11,
-    792, 600, 755, 1, 944, 999, 155, 234,
-    400, 688, 830, 691, 735, 660, 380, 213,
-    211, 478, 779, 468, 538, 752, 666, 313,
-    322, 547, 587, 321, 420, 499, 544, 370,
-    66, 156, 333, 443,  560, 600, 613, 390
+    3800, 3700, 1680, 660, 800, 1622, 1111, 1950,
+    3750,1900,1740, 680, 1844, 1843, 22, 911,
+    1792, 2600, 2755, 1, 2944, 1999, 155, 234,
+    1400,1688, 2830, 691, 3735, 1660, 1380, 3213,
+    1211, 2478, 2779, 468, 2538, 1752, 666, 3313,
+    322, 547, 3587, 3321, 3420, 3499, 3544, 3370,
+    66, 156, 3999, 443,  1560, 600, 613, 390
 };
 
 uint16_t karamba [8*8];
 int main()
 {
 
+    constexpr uint16_t repeat {1000};
+    auto startBilinear = std::chrono::high_resolution_clock::now(); // Początek pomiaru dla bilinear
+    for(volatile int i = 0; i < repeat; i++) {
+        bilinear(planszaDestTmp,80,64,plansza3,8,8);
+    }
 
-    bilinear(planszaDest,128,128,plansza3,8,8);
+    auto endBilinear = std::chrono::high_resolution_clock::now(); // Koniec pomiaru dla bilinear
+
+    nearestNeighbor(planszaDest,160,128,planszaDestTmp,80,64);
     for(int i = 0; i < 128; i++) {
 
-        for(int j = 0; j < 128; j++) {
-            planszaDest[i*128+j] = convertToColor(planszaDest[i*128+j],1000);
+        for(int j = 0; j < 160; j++) {
+            planszaDest[i*160+j] = convertToColor(planszaDest[i*160+j],4000);
         }
     }
 
-    saveBMP("planszaDestgradient.bmp", planszaDest, 128, 128);
+    saveBMP("Zbilinear.bmp", planszaDest, 160, 128);
 
+    auto startBicubic = std::chrono::high_resolution_clock::now();
+    for(volatile int i = 0; i < repeat; i++) {
+        bicubicResize(planszaDestTmp,80,64,plansza3,8,8);
+    }
+    auto endBicubic = std::chrono::high_resolution_clock::now();
 
-    nearestNeighbor(planszaDest,128,128,plansza3,8,8);
-    for(int i = 0; i < 128; i++) {
+    nearestNeighbor(planszaDest,160,128,planszaDestTmp,80,64);
+    for(volatile int i = 0; i < 128; i++) {
 
-        for(int j = 0; j < 128; j++) {
-            planszaDest[i*128+j] = convertToColor(planszaDest[i*128+j],1000);
+        for(int j = 0; j < 160; j++) {
+            planszaDest[i*160+j] = convertToColor(planszaDest[i*160+j],4000);
         }
     }
 
-    saveBMP("planszaDest1.bmp", planszaDest, 128, 128);
-    std::cout << "ala";
+    saveBMP("Zbicubic.bmp", planszaDest, 160, 128);
 
+    auto durationBilinear = std::chrono::duration_cast<std::chrono::microseconds>(endBilinear - startBilinear);
+    auto durationBicubic = std::chrono::duration_cast<std::chrono::microseconds>(endBicubic - startBicubic);
+
+    std::cout << "Czas interpolacji bilinear: " << durationBilinear.count()/repeat << " mikrosekund." << std::endl;
+    std::cout << "Czas interpolacji bicubic: " << durationBicubic.count()/repeat << " mikrosekund." << std::endl;
 
 
     return 0;
